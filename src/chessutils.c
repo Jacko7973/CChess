@@ -38,9 +38,9 @@ Piece       piece_get_color(Piece p) {
  * @param   fen     FEN string to build board
  * @return  Pointer to board object (must be freed)
  */
-Board *     board_create(char *fen) {
+Board *     board_create(const char *fen) {
 
-    // 1). Allocate the board structure.
+    // 1. Allocate the board structure.
     Board *b = (Board *) malloc(sizeof(Board));
     if (b) {
         b->data = (Piece *) calloc(BOARD_DIM * BOARD_DIM, sizeof(Piece));        
@@ -49,13 +49,24 @@ Board *     board_create(char *fen) {
         b->fullmove_number = 0;
     }
 
-    // 2). Process FEN string.
-    //  TODO: handle remaining components of FEN string.
+    // 2. Process FEN string.
 
+    //  2(a). Split FEN string into componenets.
     char *new_fen = strdup(fen);
+    char board_config[73], turn, castle[5], ep_target[3];
+    size_t halfmove_clock = 0, fullmove_number = 0;
+
+    int num_fields = sscanf(new_fen, "%s %c %s %s %lu %lu",
+                                board_config, &turn, castle, ep_target, &fullmove_number, &halfmove_clock
+                            );
+    free(new_fen);
+    
+    //  2(b). Place pieces on board according to FEN string.
+    if (num_fields == 0)
+        return b;
 
     size_t x = 0, y = 0;
-    for (char *row = strtok(new_fen, "/"); row; row = strtok(NULL, "/")) {
+    for (char *row = strtok(board_config, "/"); row; row = strtok(NULL, "/")) {
         for (char *c = row; *c; c++) {
             if (isdigit(*c)) {
                 size_t num_reps = *c - '0';
@@ -72,7 +83,28 @@ Board *     board_create(char *fen) {
         y++;
     }
 
-    free(new_fen);
+    //  2(c). Set turn according to FEN string.
+    if (num_fields < 2)
+        return b;
+
+    b->turn = (turn == 'w') ? WHITE : BLACK;
+    
+    //  2(d). Set castle availibility according to FEN string.
+    if (num_fields < 3)
+        return b;
+    // TODO
+
+    //  2(e). Set enpassant target according to FEN string.
+    if (num_fields < 4)
+        return b;
+    // TODO
+
+    //  2(f). Set move counters according to FEN string.
+    if (num_fields < 6)
+        return b;
+
+    b->halfmove_clock = halfmove_clock;
+    b->fullmove_number = fullmove_number;
 
     return b;
 }

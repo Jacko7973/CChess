@@ -9,7 +9,7 @@ ARFLAGS = 	rcs
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
-bin/chess_test: src/chess_test.o src/chessutils.o src/terminalchess.o
+bin/chess_test: src/chess_test.o src/chessutils.o src/terminalchess.o src/bitboard.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 

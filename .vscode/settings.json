@@ -1,0 +1,9 @@
+{
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/jack/Projects/CChess/bin",
+            "binaryPath": "/home/jack/Projects/CChess/bin/chess_test",
+            "binaryArgs": []
+        }
+    ]
+}

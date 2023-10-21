@@ -5,11 +5,14 @@
 
 #include "chessutils.h"
 #include "terminalchess.h"
+#include "bitboard.h"
 
+
+const char *DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 int main(int argc, char *argv[]) {
     
-    Board *b = board_create("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+    Board *b = board_create(DEFAULT_FEN);
 
     b->data[3] = PAWN | WHITE;
     b->data[11] = PAWN | BLACK;

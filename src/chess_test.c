@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
     
-    Board *b = board_create("");
+    Board *b = board_create("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
 
     b->data[3] = PAWN | WHITE;
     b->data[11] = PAWN | BLACK;

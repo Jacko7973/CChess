@@ -3,6 +3,10 @@
 
 #include "chessutils.h"
 
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+
 
 /* Functions */
 
@@ -34,9 +38,9 @@ Piece       piece_get_color(Piece p) {
  * @param   fen     FEN string to build board
  * @return  Pointer to board object (must be freed)
  */
-Board *     board_create(const char *fen) {
-    // TODO: Process FEN string.
+Board *     board_create(char *fen) {
 
+    // 1). Allocate the board structure.
     Board *b = (Board *) malloc(sizeof(Board));
     if (b) {
         b->data = (Piece *) calloc(BOARD_DIM * BOARD_DIM, sizeof(Piece));        
@@ -44,6 +48,32 @@ Board *     board_create(const char *fen) {
         b->halfmove_clock = 0;
         b->fullmove_number = 0;
     }
+
+    // 2). Process FEN string.
+    //  TODO: handle remaining components of FEN string.
+
+    char *new_fen = strdup(fen);
+
+    size_t x = 0, y = 0;
+    for (char *row = strtok(new_fen, "/"); row; row = strtok(NULL, "/")) {
+        for (char *c = row; *c; c++) {
+            if (isdigit(*c)) {
+                size_t num_reps = *c - '0';
+                for (size_t i = 0; i < num_reps; i++)
+                    x++;
+                continue;
+            }
+
+            Piece type = strchr(PIECE_TYPE_STR, tolower(*c)) - PIECE_TYPE_STR;
+            Piece color = (*c == tolower(*c)) ? BLACK : WHITE;
+            *(board_at(b, x++, y)) = type | color;
+        }
+        x = 0;
+        y++;
+    }
+
+    free(new_fen);
+
     return b;
 }
 

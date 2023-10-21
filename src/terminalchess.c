@@ -5,9 +5,6 @@
 
 #include <ctype.h>
 
-/* Constants */
-
-const char *PIECE_TYPE_STR = " prnbqk";
 
 /* Functions */
 

@@ -10,6 +10,7 @@
 /* Macros */
 
 #define BOARD_DIM (8)
+#define PIECE_TYPE_STR (" prnbqk")
 
 /* Piece Type bitmasks */
 
@@ -49,7 +50,7 @@ Piece       piece_get_type(Piece p);
 Piece       piece_get_color(Piece p);
 
 
-Board *     board_create(const char *fen);
+Board *     board_create(char *fen);
 void        board_delete(Board *b);
 
 Piece *     board_at(Board *b, size_t x, size_t y);

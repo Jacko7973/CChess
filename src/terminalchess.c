@@ -1,7 +1,7 @@
 /* terminalchess.c */
 /* Jack O'Connor 2023 */
 
-#include "terminalchess.h"
+#include "chess/terminalchess.h"
 
 #include <ctype.h>
 

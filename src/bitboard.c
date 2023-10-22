@@ -1,7 +1,7 @@
 /* bitboard.c */
 /* Jack O'Connor 2023 */
 
-#include "bitboard.h"
+#include "chess/bitboard.h"
 
 
 /* Functions */

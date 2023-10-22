@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-#include "chessutils.h"
+#include "chess/chessutils.h"
 
 
 /* Function headers */

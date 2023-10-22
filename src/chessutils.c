@@ -1,7 +1,7 @@
 /* chessutils.c */
 /* Jack O'Connor 2023 */
 
-#include "chessutils.h"
+#include "chess/chessutils.h"
 
 #include <ctype.h>
 #include <stdio.h>

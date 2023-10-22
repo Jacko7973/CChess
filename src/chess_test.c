@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#include "chessutils.h"
-#include "terminalchess.h"
-#include "bitboard.h"
+#include "chess/chessutils.h"
+#include "chess/terminalchess.h"
+#include "chess/bitboard.h"
 
 
 const char *DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

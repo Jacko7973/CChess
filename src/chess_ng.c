@@ -9,7 +9,10 @@
 
 
 int move_cmpfunc(const void *a, const void *b) {
-    return ((ChessMove)((uint64_t)a & 0xFFFFlu) - (ChessMove)((uint64_t)b & 0xFFFFlu));
+    ChessMove move_a = *(const ChessMove *)a & 0xFFFlu;
+    ChessMove move_b = *(const ChessMove *)b & 0xFFFlu;
+
+    return (int)(move_a - move_b);
 }
 
 
@@ -53,7 +56,7 @@ int main(int argc, char *argv[]) {
 
         ChessMove move = (file_from + rank_from * 8) | ((file_to + rank_to * 8) << 6);
 
-        if (!bsearch(NULL + move, moves, moves_count, sizeof(ChessMove), move_cmpfunc)) {
+        if (!bsearch(&move, moves, moves_count, sizeof(ChessMove), move_cmpfunc)) {
             fprintf(stdout, "Illegal move: %s\n", buf);
             continue;
         }

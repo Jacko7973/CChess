@@ -10,27 +10,8 @@
 
 /* Constants */
 
-const Bitboard FILES[] = {
-    0x0101010101010101L<<0,
-    0x0101010101010101L<<1,
-    0x0101010101010101L<<2,
-    0x0101010101010101L<<3,
-    0x0101010101010101L<<4,
-    0x0101010101010101L<<5,
-    0x0101010101010101L<<6,
-    0x0101010101010101L<<7,
-};
-
-const Bitboard RANKS[] = {
-    0x00000000000000FFL,
-    0x000000000000FF00L,
-    0x0000000000FF0000L,
-    0x00000000FF000000L,
-    0x000000FF00000000L,
-    0x0000FF0000000000L,
-    0x00FF000000000000L,
-    0xFF00000000000000L,
-};
+const Bitboard A_FILE = 0x0101010101010101;
+const Bitboard RANK_1 = 0x00000000000000FF;
 
 const char *DEFAULT_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -62,7 +43,7 @@ const size_t DIRECTIONS_QUEEN[]  = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 **/
 char            get_piece_char(ChessPiece piece) {
     
-    uint8_t color = piece & PIECE_COLOR_BITMASK;
+    ChessPiece color = piece_color(piece);
     piece = piece & PIECE_TYPE_BITMASK;
     for (int i = 0; i < 6; i++) {
         if (piece == PAWN) {
@@ -83,7 +64,7 @@ char            get_piece_char(ChessPiece piece) {
 **/
 ChessPiece      get_char_piece(char c) {
 
-    uint8_t color = (isupper(c)) ? WHITE : BLACK;
+    ChessPiece color = (isupper(c)) ? WHITE : BLACK;
     c = tolower(c);
     ChessPiece piece = PAWN;
     for (char *cmp = (char *)PIECE_CHARS; *cmp; cmp++) {
@@ -104,7 +85,7 @@ ChessPiece      get_char_piece(char c) {
 ChessBoard *        chessboard_create(const char *fen) {
     
     // Handle event that fen is NULL.
-    if (!fen) return chessboard_create(DEFAULT_FEN);
+    if (!fen) fen = DEFAULT_FEN;
 
     ChessBoard *cb = (ChessBoard *) calloc(1, sizeof(ChessBoard));
     if (cb) {
@@ -121,8 +102,8 @@ ChessBoard *        chessboard_create(const char *fen) {
             if (isalpha(*c)) {
                 ChessPiece piece = get_char_piece(*c);
                 if (piece) {
-                    uint8_t color = piece & PIECE_COLOR_BITMASK;
-                    uint8_t type = piece & PIECE_TYPE_BITMASK;
+                    ChessPiece color = piece_color(piece);
+                    ChessPiece type = piece_type(piece);
                     if (type == KING) {
                         if (color == WHITE) cb->king_pos_w = (rank * 8) + file;
                         if (color == BLACK) cb->king_pos_b = (rank * 8) + file;
@@ -144,12 +125,7 @@ ChessBoard *        chessboard_create(const char *fen) {
             c++;
         }
 
-        // Update sliding pice targets
-        chessboard_update_sliding_targets(cb, BISHOP);
-        chessboard_update_sliding_targets(cb, ROOK);
-        chessboard_update_sliding_targets(cb, QUEEN);
-
-        if (!*c) return cb;
+        if (!*c) goto FEN_COMPLETE;
         c++;
 
         // Process side-to-move
@@ -157,7 +133,7 @@ ChessBoard *        chessboard_create(const char *fen) {
         else if (*c == 'b') cb->to_move = BLACK;
         else return cb;
 
-        if (!*c) return cb;
+        if (!*c) goto FEN_COMPLETE;
         c += 2;
 
         // Process castling ability
@@ -176,12 +152,12 @@ ChessBoard *        chessboard_create(const char *fen) {
                     cb->castle_ability_b |= CAN_CASTLE_LONG;
                     break;
                 default:
-                    return cb;
+                    goto FEN_COMPLETE;
             }
             c++;
         }
 
-        if (!*c) return cb;
+        if (!*c) goto FEN_COMPLETE;
         c++;
 
         // Process enpassant target square
@@ -194,20 +170,39 @@ ChessBoard *        chessboard_create(const char *fen) {
             cb->enpassant_target = (rank * 8) + file;
         }
 
-        if (!*c) return cb;
+        if (!*c) goto FEN_COMPLETE;
         c += 2;
 
         // Process move counters
         char counter_buf[64];
         strcpy(counter_buf, c);
         char *word = strtok(counter_buf, " ");
-        if (!word) return cb;
+        if (!word) goto FEN_COMPLETE;
         cb->halfmove_clock = atol(word);
 
         word = strtok(NULL, " ");
-        if (!word) return cb;
+        if (!word) goto FEN_COMPLETE;
         cb->fullmove_counter = atol(word);
+
+FEN_COMPLETE:
+        // Populate bitboards
+        for (size_t rank = 0; rank < 8; rank++) {
+            for (size_t file = 0; file < 8; file++) {
+                ChessPiece *piece = chessboard_get(cb, file, rank);
+                if (!piece || !*piece) continue;
+
+                ChessPiece color = piece_color(*piece);
+                // ChessPiece type = piece_type(*piece);
+
+                bitboard_set(cb->locations[BB_IDX_ALL], file, rank, true);
+                bitboard_set(cb->locations[BB_IDX_COLOR(color)], file, rank, true);
+                bitboard_set(cb->locations[BB_IDX_PIECE(*piece)], file, rank, true);
+
+                // TODO: Set target locations
+            }
+        }
     }
+
     return cb;
 }
 
@@ -218,7 +213,6 @@ ChessBoard *        chessboard_create(const char *fen) {
  * @param   cb  Pointer to ChessBoard structure to delete.
 **/
 void                chessboard_delete(ChessBoard *cb) {
-
     free(cb);
 }
 
@@ -227,7 +221,7 @@ void                chessboard_dump(ChessBoard *cb, FILE *stream) {
 
     for (ssize_t rank = 7; rank >= 0; rank--) {
         fprintf(stream, "  +---+---+---+---+---+---+---+---+\n");
-        fprintf(stream, "%ld ", rank);
+        fprintf(stream, "%ld ", rank + 1);
         for (ssize_t file = 0; file < 8; file++) {
             ChessPiece piece = cb->board[rank * 8 + file];
             char piece_char;
@@ -349,7 +343,177 @@ ChessPiece *        chessboard_get(ChessBoard *cb, uint8_t file, uint8_t rank) {
 }
 
 
-void                chessboard_update_sliding_targets(ChessBoard *cb, ChessPiece piece_type) {
-    // TODO
+bool                chessboard_make_move(ChessBoard *cb, ChessMove move) {
+    
+    uint16_t position_from  = move & 0x3F;
+    uint16_t position_to    = (move >> 6) & 0x3F;
+
+    ChessPiece color = cb->to_move;
+    ChessPiece enemy_color = (color == WHITE) ? BLACK : WHITE;
+
+    // TODO: Check legality
+    ChessPiece *piece_from = cb->board + position_from;
+    ChessPiece *piece_to = cb->board + position_to;
+
+    if (piece_color(*piece_from) != color) return false;
+    if (*piece_to && piece_color(*piece_to) != enemy_color) return false;
+
+    Bitboard bb_from    = (1lu << position_from);
+    Bitboard bb_to      = (1lu << position_to);
+
+    cb->locations[BB_IDX_ALL]                   &= ~bb_from;
+    cb->locations[BB_IDX_ALL]                   |= bb_to;
+
+    cb->locations[BB_IDX_COLOR(color)]          &= ~bb_from;
+    cb->locations[BB_IDX_COLOR(color)]          |= bb_to;
+    cb->locations[BB_IDX_PIECE(*piece_from)]    &= ~bb_from;
+    cb->locations[BB_IDX_PIECE(*piece_from)]    |= bb_to;
+
+    if (*piece_to) {
+        cb->locations[BB_IDX_COLOR(enemy_color)]    &= ~bb_to;
+        cb->locations[BB_IDX_PIECE(*piece_to)]      &= ~bb_to;
+    }
+    // TODO: Update target bitboards
+
+    *piece_to = *piece_from;
+    *piece_from = 0;
+
+    cb->to_move = (cb->to_move == WHITE) ? BLACK : WHITE;
+    return true;
+}
+
+
+bool                chessboard_unmake_move(ChessBoard *cb, ChessMove move);
+
+
+/**
+ * Generate list of pseudolegal moves (may put the player in check)
+ *
+ * @param   cb      Pointer to ChessBoard structure.
+ * @param   out     Pointer to array of ChessMoves to populate 
+ *                      (218 elements, terminated with null move)
+ *
+ * @return  Pointer to ChessPiece structure, or NULL if coordinates invalid.
+**/
+size_t              chessboard_pseudolegal_moves(ChessBoard *cb, ChessMove *out) {
+
+    size_t move_idx = 0;
+    ChessPiece color = cb->to_move;
+    ChessPiece enemy_color = (color == WHITE) ? BLACK : WHITE;
+
+    for (size_t rank = 0; rank < 8; rank++) {
+        for (size_t file = 0; file < 8; file++) {
+            if (!bitboard_get(cb->locations[BB_IDX_COLOR(color)], file, rank)) continue;
+
+            uint8_t position = file + rank * 8;
+            ChessPiece *piece = chessboard_get(cb, file, rank);
+            ChessPiece type = piece_type(*piece);
+
+            switch (type) {
+                case PAWN:
+                    // TODO
+                    break;
+                case KNIGHT:
+
+                    for (size_t i = 0; i < sizeof(KNIGHT_OFFSETS)/sizeof(KNIGHT_OFFSETS[0]); i++) {
+                        ssize_t dx = KNIGHT_OFFSETS[i][1];
+                        ssize_t dy = KNIGHT_OFFSETS[i][0];
+                        size_t new_file = file + dx;
+                        size_t new_rank = rank + dy;
+
+                        if (new_file >= 8 || new_rank >= 8) continue;
+                        if (bitboard_get(cb->locations[BB_IDX_COLOR(color)], new_file, new_rank)) continue;
+                        out[move_idx++] = position | ((new_file + new_rank * 8) << 6);
+                        
+                    }
+
+                    break;
+                case BISHOP:
+
+                    for (size_t i = 0; i < sizeof(DIRECTIONS_BISHOP)/sizeof(size_t); i++) {
+                        size_t dir_index = DIRECTIONS_BISHOP[i];
+                        ssize_t dx = DIRECTIONS[dir_index][1];
+                        ssize_t dy = DIRECTIONS[dir_index][0];
+                        size_t new_file = file + dx;
+                        size_t new_rank = rank + dy;
+
+                        while (new_file <= 8 && new_rank <= 8) {
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(color)], new_file, new_rank)) break;
+                            out[move_idx++] = position | ((new_file + new_rank * 8) << 6);
+
+                            new_file += dx;
+                            new_rank += dy;
+
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(enemy_color)], new_file, new_rank)) break;
+                        }
+                    }
+
+                    break;
+                case ROOK:
+
+                    for (size_t i = 0; i < sizeof(DIRECTIONS_ROOK)/sizeof(size_t); i++) {
+                        size_t dir_index = DIRECTIONS_ROOK[i];
+                        ssize_t dx = DIRECTIONS[dir_index][1];
+                        ssize_t dy = DIRECTIONS[dir_index][0];
+                        size_t new_file = file + dx;
+                        size_t new_rank = rank + dy;
+
+                        while (new_file <= 8 && new_rank <= 8) {
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(color)], new_file, new_rank)) break;
+                            out[move_idx++] = position | ((new_file + new_rank * 8) << 6);
+
+                            new_file += dx;
+                            new_rank += dy;
+
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(enemy_color)], new_file, new_rank)) break;
+                        }
+                    }
+
+                    break;
+                case QUEEN:
+
+                    for (size_t i = 0; i < sizeof(DIRECTIONS_QUEEN)/sizeof(size_t); i++) {
+                        size_t dir_index = DIRECTIONS_QUEEN[i];
+                        ssize_t dx = DIRECTIONS[dir_index][1];
+                        ssize_t dy = DIRECTIONS[dir_index][0];
+                        size_t new_file = file + dx;
+                        size_t new_rank = rank + dy;
+
+                        while (new_file <= 8 && new_rank <= 8) {
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(color)], new_file, new_rank)) break;
+                            out[move_idx++] = position | ((new_file + new_rank * 8) << 6);
+
+                            new_file += dx;
+                            new_rank += dy;
+
+                            if (bitboard_get(cb->locations[BB_IDX_COLOR(enemy_color)], new_file, new_rank)) break;
+                        }
+                    }
+
+                    break;
+                case KING:
+
+                    for (size_t i = 0; i < 8; i++) {
+                        size_t new_file = file + DIRECTIONS[i][1];
+                        size_t new_rank = rank + DIRECTIONS[i][0];
+
+                        if (new_file >= 8 || new_rank >= 8) continue;
+                        if (bitboard_get(cb->locations[BB_IDX_COLOR(color)], new_file, new_rank)) continue;
+                        if (bitboard_get(cb->targets[BB_IDX_COLOR(enemy_color)], new_file, new_rank)) continue;
+
+                        out[move_idx++] = position | ((new_file + new_rank * 8) << 6);
+                    }
+
+                    break;
+                default:
+                    out[0] = 0;
+                    fprintf(stderr, "chessboard_pseudolegal_moves\n");
+                    return 0;
+            }
+        }
+    }
+
+    out[move_idx] = 0;
+    return move_idx;
 }
 

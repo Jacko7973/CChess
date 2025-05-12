@@ -1,5 +1,5 @@
 CC=			gcc
-CFLAGS=		-Wall -std=gnu99 -g -Iinclude -fPIC
+CFLAGS=		-Wall -std=gnu99 -g -Iinclude -fPIC -O3
 LD=			gcc
 LDFLAGS=	-Llib -Iinclude
 LOAD=		LD_LIBRARY_PATH=lib/
@@ -12,10 +12,10 @@ TARGETS=	bin/chess bin/chess_ng bin/unit_chess
 ALL:	$(TARGETS)
 
 bin/chess:			bin/chess.o	lib/libchess.so
-	$(LOAD) $(LD) $(LDFLAGS) $(LIBS) -o $@ $^
+	$(LD) $(LDFLAGS) $(LIBS) -o $@ $^
 
 bin/chess_ng:		bin/chess_ng.o	lib/libchess_ng.so
-	$(LOAD) $(LD) $(LDFLAGS) $(LIBSNG) -o $@ $^
+	$(LD) $(LDFLAGS) $(LIBSNG) -o $@ $^
 
 lib/libchess.so:	bin/list.o bin/bitboard.o bin/chessboard.o bin/chessgame.o
 	$(LD) $(LDFLAGS) -shared -o $@ $^

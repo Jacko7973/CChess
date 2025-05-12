@@ -12,6 +12,15 @@
 #include "chesspiece.h"
 #include "bitboard.h"
 
+
+#define MAX_MOVES   (218)
+#define COLOR_ARR_INDEX(color)  ((color == WHITE) ? 0 : 1)
+#define PIECE_ARR_INDEX(piece)  (piece & (PIECE_TYPE_BITMASK | PIECE_COLOR_BITMASK))
+
+#define BB_IDX_ALL              (7)
+#define BB_IDX_COLOR(color)     (color)
+#define BB_IDX_PIECE(piece)     ((piece) & (PIECE_TYPE_BITMASK | PIECE_COLOR_BITMASK))
+
 /* Types */
 
 typedef struct {
@@ -19,9 +28,9 @@ typedef struct {
     size_t      halfmove_clock;
     size_t      fullmove_counter;
 
-    Bitboard    rook_targets;
-    Bitboard    bishop_targets;
-    Bitboard    queen_targets;
+    Bitboard    locations[14];
+
+    Bitboard    targets[14];
 
     uint8_t     to_move;
     int8_t      enpassant_target;
@@ -32,6 +41,7 @@ typedef struct {
     uint8_t     king_pos_b;
 } ChessBoard;
 
+typedef uint16_t ChessMove;
 
 
 /* External Function */
@@ -42,7 +52,11 @@ void                chessboard_dump(ChessBoard *cb, FILE *stream);
 char *              chessboard_to_fen(ChessBoard *cb);
 
 ChessPiece *        chessboard_get(ChessBoard *cb, uint8_t file, uint8_t rank);
-void                chessboard_update_sliding_targets(ChessBoard *cb, ChessPiece piece_type);
+
+bool                chessboard_make_move(ChessBoard *cb, ChessMove move);
+bool                chessboard_unmake_move(ChessBoard *cb, ChessMove move);
+
+size_t              chessboard_pseudolegal_moves(ChessBoard *board, ChessMove *out);
 
 #endif
 

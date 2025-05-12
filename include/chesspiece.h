@@ -14,6 +14,8 @@
 #define PIECE_COLOR_BITMASK     (0x08)
 #define PIECE_CASTLE_BITMASK    (0x30)
 
+#define piece_type(p)           (p & PIECE_TYPE_BITMASK)
+#define piece_color(p)          (p & PIECE_COLOR_BITMASK)
 
 /* Types */
 

@@ -39,7 +39,14 @@ enum ChessPieceColor { // 4th bit of ChessPiece
     BLACK       = 1<<3,
 };
 
-enum ChessPieceCastleAbility { // 5th and 6th bit of ChessPiece
+enum ChessPieceFlag { // 5th, 6th, and 7th, bit of ChessPiece
+    P_TO_N  = 1 << 4,
+    P_TO_B  = 2 << 4,
+    P_TO_R  = 3 << 4,
+    P_TO_Q  = 4 << 4,
+};
+
+enum ChessPieceCastleAbility { // ChessBoard.castle_availability
     CAN_CASTLE_LONG     = 1<<4,
     CAN_CASTLE_SHORT    = 1<<5
 };
